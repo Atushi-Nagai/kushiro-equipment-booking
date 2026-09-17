@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>釧路支部 点検機材予約</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+  // ▼▼▼ ここにFirebaseコンソールで取得した設定を貼り付けてください ▼▼▼
+  const firebaseConfig = {
+    apiKey: "AIzaSyCbRRbyhecJnP7M6RuehOsz61mWmchrBjA",
+    authDomain: "kushiro-equipment-booking.firebaseapp.com",
+    projectId: "kushiro-equipment-booking",
+    storageBucket: "kushiro-equipment-booking.firebasestorage.app",
+    messagingSenderId: "349310876692",
+    appId: "1:349310876692:web:4bf5d0892d63b90aa2fb01"
+  };
+  // ▲▲▲ ここまで ▲▲▲
+  firebase.initializeApp(firebaseConfig);
+  const firestoreDb = firebase.firestore();
+</script>
+<style>
+  :root{
+    --bg:#F3F5F4;
+    --panel:#FFFFFF;
+    --ink:#182226;
+    --ink-soft:#5B6B6E;
+    --primary:#163B4A;
+    --primary-light:#2C5C6E;
+    --accent:#DD8629;
+    --accent-soft:#F6E3CB;
+    --success:#2E7D5B;
+    --success-soft:#DCEEE4;
+    --danger:#BD4638;
+    --danger-soft:#F6E0DC;
+    --border:#DCE2DF;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans JP', sans-serif;
+    line-height:1.6;
+  }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  header{
+    background:var(--primary);
+    color:#fff;
+    padding:22px 20px 20px;
+  }
+  header .wrap{ max-width:920px; margin:0 auto; }
+  header .branch{
+    font-size:13px;
+    letter-spacing:.02em;
+    color:#B9CDD5;
+    margin-bottom:4px;
+  }
+  header h1{
+    font-size:22px;
+    font-weight:700;
+    margin:0;
+  }
+
+  .tabs{
+    display:flex;
+    gap:2px;
+    max-width:920px;
+    margin:0 auto;
+    padding:0 20px;
+    background:var(--primary);
+    overflow-x:auto;
+  }
+  .tab{
+    background:transparent;
+    border:none;
+    color:#AFC4CC;
+    padding:10px 14px 12px;
+    font-size:14px;
+    font-weight:500;
+    font-family:inherit;
+    cursor:pointer;
+    border-bottom:3px solid transparent;
+    white-space:nowrap;
+  }
+  .tab.active{
+    color:#fff;
+    border-bottom:3px solid var(--accent);
+  }
+
+  main{
+    max-width:920px;
+    margin:0 auto;
+    padding:22px 20px 60px;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    margin-bottom:16px;
+  }
+  .panel h2{
+    font-size:16px;
+    margin:0 0 12px;
+    font-weight:600;
+  }
+  .panel-sub{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:-8px 0 14px;
+  }
+
+  .identity{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:flex-end;
+  }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  .field label{ font-size:12px; color:var(--ink-soft); }
+  input[type=text], input[type=email], input[type=date], input[type=time], select{
+    font-family:inherit;
+    font-size:14px;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:4px;
+    background:#fff;
+    color:var(--ink);
+    min-width:180px;
+  }
+  input:focus, select:focus, button:focus{
+    outline:2px solid var(--primary-light);
+    outline-offset:1px;
+  }
+  button{
+    font-family:inherit;
+    cursor:pointer;
+  }
+  .btn{
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    border-radius:4px;
+    padding:9px 16px;
+    font-size:14px;
+    font-weight:600;
+  }
+  .btn:hover{ background:var(--primary-light); }
+  .btn.accent{ background:var(--accent); }
+  .btn.accent:hover{ background:#c8761f; }
+  .btn.ghost{
+    background:transparent;
+    color:var(--primary);
+    border:1px solid var(--primary);
+  }
+  .btn.ghost:hover{ background:#EEF3F4; }
+  .btn.danger{ background:var(--danger); color:#fff; border:none; }
+  .btn.danger:hover{ background:#a03a2e; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn-sm{ padding:6px 12px; font-size:13px; }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+  }
+  th, td{
+    text-align:left;
+    padding:9px 8px;
+    border-bottom:1px solid var(--border);
+    vertical-align:top;
+  }
+  th{
+    font-size:12px;
+    color:var(--ink-soft);
+    font-weight:600;
+  }
+  tr:last-child td{ border-bottom:none; }
+
+  .tag{
+    display:inline-block;
+    font-size:12px;
+    font-weight:600;
+    padding:2px 8px;
+    border-radius:20px;
+  }
+  .tag.confirmed{ background:var(--success-soft); color:var(--success); }
+  .tag.pending{ background:var(--accent-soft); color:#9C5E17; }
+
+  .equip-list{ list-style:none; margin:0; padding:0; }
+  .equip-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 4px;
+    border-bottom:1px solid var(--border);
+    gap:10px;
+  }
+  .equip-row:last-child{ border-bottom:none; }
+  .equip-name{ font-weight:600; font-size:14.5px; }
+  .equip-note{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+
+  .cal-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .cal-head .month{ font-weight:600; font-size:15px; }
+  .cal-nav{ display:flex; gap:6px; }
+  .cal-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:4px;
+  }
+  .cal-dow{
+    font-size:11px;
+    color:var(--ink-soft);
+    text-align:center;
+    padding-bottom:4px;
+  }
+  .cal-day{
+    min-height:58px;
+    border:1px solid var(--border);
+    border-radius:4px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding:5px 3px 4px;
+    font-size:13px;
+    background:#fff;
+    cursor:pointer;
+    position:relative;
+  }
+  .cal-day.empty{ border:none; cursor:default; }
+  .cal-day.past{ color:#C3CBC9; cursor:not-allowed; background:#FAFAFA; }
+  .cal-day.free:hover{ border-color:var(--primary-light); background:#F1F6F7; }
+  .cal-day.confirmed{ background:var(--success-soft); border-color:var(--success); color:var(--success); }
+  .cal-day.pending-mine{ background:var(--accent-soft); border-color:var(--accent); color:#9C5E17; }
+  .cal-daynum{ font-weight:600; }
+  .cal-info{
+    margin-top:2px;
+    width:100%;
+    text-align:center;
+    line-height:1.25;
+  }
+  .cal-info .cal-equip{
+    display:block;
+    font-size:9.5px;
+    font-weight:600;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .cal-info .cal-member{
+    display:block;
+    font-size:10.5px;
+    font-weight:600;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .cal-day.multi{
+    align-items:stretch;
+    justify-content:flex-start;
+    padding:5px 4px 6px;
+  }
+  .reserve-layout{
+    display:flex;
+    gap:20px;
+    align-items:flex-start;
+  }
+  .equip-picker-col{
+    width:230px;
+    flex-shrink:0;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    max-height:520px;
+    overflow-y:auto;
+  }
+  .equip-picker{ padding:6px; }
+  .equip-check{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    padding:8px 8px;
+    border-bottom:1px solid var(--border);
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .equip-check:last-child{ border-bottom:none; }
+  .equip-check:hover{ background:#F1F6F7; }
+  .equip-check input{ margin-top:3px; flex-shrink:0; }
+  .calendar-col{ flex:1; min-width:0; }
+
+  .cal-multi-item{
+    background:var(--success-soft);
+    border-radius:3px;
+    padding:1px 4px;
+    margin-top:3px;
+    text-align:left;
+    width:100%;
+  }
+  .cal-multi-item .cal-equip{
+    font-size:8.5px;
+    font-weight:600;
+    color:var(--success);
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .cal-multi-item .cal-member{
+    font-size:9.5px;
+    font-weight:600;
+    color:var(--success);
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .cal-multi-item .cal-time{
+    font-size:8.5px;
+    color:var(--success);
+    display:block;
+  }
+  .cal-multi-item.pending{ background:var(--accent-soft); }
+  .cal-multi-item.pending .cal-equip,
+  .cal-multi-item.pending .cal-member,
+  .cal-multi-item.pending .cal-time{ color:#9C5E17; }
+  .cal-info .cal-time{
+    display:block;
+    font-size:9px;
+  }
+
+  @media (max-width:680px){
+    .reserve-layout{ flex-direction:column; }
+    .equip-picker-col{ width:100%; max-height:220px; }
+  }
+  .legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .swatch{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+
+  .empty-state{
+    padding:26px 10px;
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:14px;
+  }
+
+  .req-card{
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    margin-bottom:10px;
+  }
+  .req-card .meta{ font-size:13px; color:var(--ink-soft); margin-bottom:10px; }
+  .req-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  .toast{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:#fff;
+    padding:10px 18px;
+    border-radius:6px;
+    font-size:13.5px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+    z-index:50;
+    max-width:90%;
+    text-align:center;
+  }
+  .toast.show{ opacity:1; }
+
+  .notice{
+    background:#EEF3F4;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:12px 14px;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:16px;
+  }
+
+  @media (max-width:520px){
+    .cal-day{ font-size:11.5px; min-height:50px; }
+    .cal-info .cal-equip{ font-size:8.5px; }
+    .cal-info .cal-member{ font-size:9.5px; }
+    header h1{ font-size:19px; }
+    .identity{ flex-direction:column; align-items:stretch; }
+    input[type=text], input[type=email]{ min-width:0; width:100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="branch">（一社）北海道電気管理技術者協会　釧路支部</div>
+    <h1>点検機材予約システム</h1>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-tab="overview">予約状況</button>
+  <button class="tab" data-tab="reserve">機材から予約する</button>
+  <button class="tab" data-tab="approvals">承認待ち<span id="approval-badge"></span></button>
+  <button class="tab" data-tab="manage">機材の管理</button>
+</div>
+
+<main>
+
+  <div class="notice">この一覧は支部会員全員で共有されています。自分の名前のみこの端末に保存されます。</div>
+
+  <div class="panel">
+    <h2>会員名</h2>
+    <p class="panel-sub">予約・承認のために、お名前を入力してください。</p>
+    <div class="identity">
+      <div class="field">
+        <label for="my-name">お名前</label>
+        <input type="text" id="my-name" placeholder="例: 釧路 太郎">
+      </div>
+    </div>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <section id="tab-overview">
+    <div class="panel">
+      <h2>月間予約カレンダー</h2>
+      <p class="panel-sub">すべての機材の予約状況をまとめて確認できます。</p>
+      <div class="cal-head">
+        <div class="cal-nav"><button class="btn ghost btn-sm" id="ov-cal-prev">← 前月</button></div>
+        <div class="month" id="ov-cal-month"></div>
+        <div class="cal-nav"><button class="btn ghost btn-sm" id="ov-cal-next">次月 →</button></div>
+      </div>
+      <div class="cal-grid" id="ov-cal-grid"></div>
+    </div>
+    <div class="panel">
+      <h2>機材別 予約一覧</h2>
+      <p class="panel-sub">直近の予約状況です。機材名をクリックすると予約画面に移動します。</p>
+      <div id="overview-body"></div>
+    </div>
+  </section>
+
+  <!-- RESERVE TAB -->
+  <section id="tab-reserve" style="display:none;">
+    <div class="panel">
+      <h2>機材を予約する</h2>
+      <p class="panel-sub">左の一覧から予約したい機材をすべてチェックし、右のカレンダーで日付を選ぶと、選んだ機材をまとめて予約できます。</p>
+      <div class="identity" style="margin-bottom:14px;">
+        <div class="field">
+          <label for="pickup-hour">受取時間(任意)</label>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <select id="pickup-hour" style="min-width:64px;"><option value="">--</option></select>
+            <span>時</span>
+            <select id="pickup-min" style="min-width:64px;">
+              <option value="">--</option>
+              <option value="00">00</option>
+              <option value="15">15</option>
+              <option value="30">30</option>
+              <option value="45">45</option>
+            </select>
+            <span>分</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="return-hour">返却時間(任意)</label>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <select id="return-hour" style="min-width:64px;"><option value="">--</option></select>
+            <span>時</span>
+            <select id="return-min" style="min-width:64px;">
+              <option value="">--</option>
+              <option value="00">00</option>
+              <option value="15">15</option>
+              <option value="30">30</option>
+              <option value="45">45</option>
+            </select>
+            <span>分</span>
+          </div>
+        </div>
+      </div>
+      <div class="reserve-layout">
+        <div class="equip-picker-col">
+          <div class="equip-picker" id="equip-picker"></div>
+        </div>
+        <div class="calendar-col" id="calendar-panel">
+          <div class="cal-head">
+            <div class="cal-nav"><button class="btn ghost btn-sm" id="cal-prev">← 前月</button></div>
+            <div class="month" id="cal-month"></div>
+            <div class="cal-nav"><button class="btn ghost btn-sm" id="cal-next">次月 →</button></div>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+          <div class="legend">
+            <span><span class="swatch" style="background:var(--success-soft);border:1px solid var(--success);"></span>予約済み</span>
+            <span><span class="swatch" style="background:var(--accent-soft);border:1px solid var(--accent);"></span>承認待ち・一部予約あり</span>
+            <span><span class="swatch" style="background:#fff;border:1px solid var(--border);"></span>空き</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- APPROVALS TAB -->
+  <section id="tab-approvals" style="display:none;">
+    <div class="panel">
+      <h2>あなた宛ての承認依頼</h2>
+      <p class="panel-sub">先に予約した機材に、後から他の会員が同じ日を希望した場合、ここに承認依頼が届きます。</p>
+      <div id="approvals-body"></div>
+    </div>
+    <div class="panel">
+      <h2>あなたが出した依頼の状況</h2>
+      <div id="my-requests-body"></div>
+    </div>
+  </section>
+
+  <!-- MANAGE TAB -->
+  <section id="tab-manage" style="display:none;">
+    <div class="panel">
+      <h2>機材を追加</h2>
+      <div class="identity">
+        <div class="field">
+          <label for="new-equip-name">機材名</label>
+          <input type="text" id="new-equip-name" placeholder="例: 絶縁抵抗計 (メガー)">
+        </div>
+        <div class="field">
+          <label for="new-equip-note">備考(任意)</label>
+          <input type="text" id="new-equip-note" placeholder="例: ケース付き・No.2">
+        </div>
+        <button class="btn accent" id="add-equip">追加</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>機材一覧</h2>
+      <ul class="equip-list" id="manage-list"></ul>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const DOW = ['日','月','火','水','木','金','土'];
+  let data = { equipment: [], reservations: [] };
+  let me = { name:'' };
+  let calState = { selected: new Set(), year:null, month:null }; // month:0-11
+  const todayISO = () => new Date().toISOString().slice(0,10);
+
+  function toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._h);
+    toast._h = setTimeout(()=> t.classList.remove('show'), 2600);
+  }
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  const DEFAULT_EQUIPMENT = [
+    '交流耐圧試験器 双興 IP-11K75M',
+    '高圧リアクトル 双興 L-13K',
+    '絶縁油圧耐圧試験器 双興 AMP-106P',
+    '保護継電器試験装置 ムサシ IP-R2000',
+    '方向性地絡試験器 双興 DGR-3050C',
+    '電源品質アナライザ',
+    'ウルトラホン 東栄電気 SE-8',
+    '開閉器テスタ',
+    'リークホン',
+    '活メガ',
+    'チェックマンカラー',
+    'スポイト'
+  ];
+
+  const REMOVED_EQUIPMENT = ['絶縁抵抗計(メガー)', '接地抵抗計', 'クランプメーター'];
+
+  const FIRESTORE_DOC = firestoreDb.collection('kushiro-equipment').doc('app-data');
+
+  async function loadAll(){
+    try{
+      const snap = await FIRESTORE_DOC.get();
+      const json = snap.exists ? snap.data() : null;
+      data = (json && json.equipment) ? json : seedData();
+    }catch(e){
+      console.error(e);
+      data = seedData();
+      toast('データの読み込みに失敗しました。通信環境をご確認ください。');
+    }
+    let changed = false;
+    DEFAULT_EQUIPMENT.forEach(name=>{
+      if(!data.equipment.some(e=>e.name===name)){
+        data.equipment.push({ id: uid(), name, note:'' });
+        changed = true;
+      }
+    });
+    const removedIds = data.equipment.filter(e=>REMOVED_EQUIPMENT.includes(e.name)).map(e=>e.id);
+    if(removedIds.length){
+      data.equipment = data.equipment.filter(e=>!REMOVED_EQUIPMENT.includes(e.name));
+      data.reservations = data.reservations.filter(r=>!removedIds.includes(r.equipId));
+      changed = true;
+    }
+    if(changed) await saveData();
+    try{
+      const raw = localStorage.getItem('my-identity');
+      me = raw ? JSON.parse(raw) : { name:'' };
+    }catch(e){ me = { name:'' }; }
+    document.getElementById('my-name').value = me.name || '';
+  }
+
+  function seedData(){
+    return {
+      equipment: DEFAULT_EQUIPMENT.map(name => ({ id: uid(), name, note:'' })),
+      reservations: []
+    };
+  }
+
+  async function saveData(){
+    try{
+      await FIRESTORE_DOC.set(data);
+    }catch(e){
+      console.error(e);
+      toast('保存に失敗しました。通信環境をご確認ください。');
+    }
+  }
+
+  async function saveIdentity(){
+    const newName = document.getElementById('my-name').value.trim();
+    if(newName === me.name) return;
+    me.name = newName;
+    try{
+      localStorage.setItem('my-identity', JSON.stringify(me));
+      if(me.name) toast('お名前を記録しました');
+    }catch(e){
+      toast('保存に失敗しました');
+    }
+    renderApprovals();
+  }
+
+  function equipName(id){
+    const eq = data.equipment.find(e=>e.id===id);
+    return eq ? eq.name : '(削除された機材)';
+  }
+
+  // カレンダーには製造会社・型式を出さず、品名部分のみ表示する
+  function equipShortName(id){
+    const full = equipName(id);
+    return full.split(' ')[0];
+  }
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      ['overview','reserve','approvals','manage'].forEach(t=>{
+        document.getElementById('tab-'+t).style.display = (t===btn.dataset.tab) ? '' : 'none';
+      });
+      if(btn.dataset.tab==='overview'){ renderOverview(); renderOverviewCalendar(); }
+      if(btn.dataset.tab==='reserve') renderCalendar();
+      if(btn.dataset.tab==='approvals') renderApprovals();
+      if(btn.dataset.tab==='manage') renderManage();
+    });
+  });
+
+  document.getElementById('my-name').addEventListener('blur', saveIdentity);
+  document.getElementById('my-name').addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){ e.target.blur(); }
+  });
+
+  // ---------- Overview ----------
+  let ovCalState = { year:null, month:null };
+
+  document.getElementById('ov-cal-prev').addEventListener('click', ()=>{
+    ovCalState.month--;
+    if(ovCalState.month<0){ ovCalState.month=11; ovCalState.year--; }
+    renderOverviewCalendar();
+  });
+  document.getElementById('ov-cal-next').addEventListener('click', ()=>{
+    ovCalState.month++;
+    if(ovCalState.month>11){ ovCalState.month=0; ovCalState.year++; }
+    renderOverviewCalendar();
+  });
+
+  function renderOverviewCalendar(){
+    const now = new Date();
+    if(ovCalState.year==null){ ovCalState.year = now.getFullYear(); ovCalState.month = now.getMonth(); }
+    document.getElementById('ov-cal-month').textContent = `${ovCalState.year}年 ${ovCalState.month+1}月`;
+
+    const grid = document.getElementById('ov-cal-grid');
+    grid.innerHTML = DOW.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+
+    const first = new Date(ovCalState.year, ovCalState.month, 1);
+    const startDow = first.getDay();
+    const daysInMonth = new Date(ovCalState.year, ovCalState.month+1, 0).getDate();
+    const today = todayISO();
+
+    for(let i=0;i<startDow;i++){
+      grid.insertAdjacentHTML('beforeend', '<div class="cal-day empty"></div>');
+    }
+
+    for(let d=1; d<=daysInMonth; d++){
+      const mm = String(ovCalState.month+1).padStart(2,'0');
+      const dd = String(d).padStart(2,'0');
+      const iso = `${ovCalState.year}-${mm}-${dd}`;
+      const dayRes = data.reservations
+        .filter(r => r.date===iso && r.status==='confirmed')
+        .sort((a,b)=> equipShortName(a.equipId).localeCompare(equipShortName(b.equipId)));
+
+      let cls = 'cal-day multi';
+      if(iso < today) cls += ' past';
+
+      const items = dayRes.map(r => `
+        <div class="cal-multi-item">
+          <span class="cal-equip">${escapeHtml(equipShortName(r.equipId))}</span>
+          <span class="cal-member">${escapeHtml(r.member)}</span>
+          ${timeLabel(r)}
+        </div>`).join('');
+
+      const cell = document.createElement('div');
+      cell.className = cls;
+      cell.innerHTML = `<div class="cal-daynum">${d}</div>${items}`;
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderOverview(){
+    const body = document.getElementById('overview-body');
+    if(data.equipment.length===0){
+      body.innerHTML = '<div class="empty-state">まだ機材が登録されていません。「機材の管理」から追加してください。</div>';
+      return;
+    }
+    const today = todayISO();
+    let html = '';
+    data.equipment.forEach(eq=>{
+      const upcoming = data.reservations
+        .filter(r => r.equipId===eq.id && r.date>=today && r.status!=='rejected')
+        .sort((a,b)=> a.date.localeCompare(b.date))
+        .slice(0,4);
+      html += `<div class="equip-row">
+        <div style="flex:1;">
+          <div class="equip-name" style="cursor:pointer;" data-goto="${eq.id}">${escapeHtml(eq.name)}</div>
+          ${eq.note ? `<div class="equip-note">${escapeHtml(eq.note)}</div>` : ''}
+          <div style="margin-top:6px;">
+            ${ upcoming.length ? upcoming.map(r=>`
+              <div style="font-size:13px;margin-top:3px;">
+                <span class="mono">${r.date}</span>
+                ${escapeHtml(r.member)}
+                <span class="tag ${r.status==='confirmed'?'confirmed':'pending'}">${r.status==='confirmed'?'予約済み':'承認待ち'}</span>
+              </div>`).join('')
+              : '<div style="font-size:13px;color:var(--ink-soft);">直近の予約はありません</div>' }
+          </div>
+        </div>
+        <button class="btn ghost btn-sm" data-goto="${eq.id}">予約する</button>
+      </div>`;
+    });
+    body.innerHTML = html;
+    body.querySelectorAll('[data-goto]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const id = el.getAttribute('data-goto');
+        document.querySelector('.tab[data-tab="reserve"]').click();
+        calState.selected = new Set([id]);
+        const now = new Date();
+        calState.year = now.getFullYear();
+        calState.month = now.getMonth();
+        renderCalendar();
+      });
+    });
+  }
+
+  // ---------- Reserve / Calendar ----------
+  function renderEquipPicker(){
+    const wrap = document.getElementById('equip-picker');
+    if(data.equipment.length===0){
+      wrap.innerHTML = '<div class="empty-state">機材が登録されていません。</div>';
+      return;
+    }
+    if(calState.selected.size===0){
+      calState.selected.add(data.equipment[0].id);
+    }
+    wrap.innerHTML = data.equipment.map(eq => `
+      <label class="equip-check">
+        <input type="checkbox" value="${eq.id}" ${calState.selected.has(eq.id) ? 'checked' : ''}>
+        <span>${escapeHtml(eq.name)}</span>
+      </label>
+    `).join('');
+    wrap.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.addEventListener('change', ()=>{
+        if(cb.checked) calState.selected.add(cb.value);
+        else calState.selected.delete(cb.value);
+        renderCalendar();
+      });
+    });
+  }
+
+  document.getElementById('cal-prev').addEventListener('click', ()=>{
+    calState.month--;
+    if(calState.month<0){ calState.month=11; calState.year--; }
+    renderCalendar();
+  });
+  document.getElementById('cal-next').addEventListener('click', ()=>{
+    calState.month++;
+    if(calState.month>11){ calState.month=0; calState.year++; }
+    renderCalendar();
+  });
+
+  function timeLabel(r){
+    if(!r || (!r.pickupTime && !r.returnTime)) return '';
+    return `<span class="cal-time">${r.pickupTime || '--:--'}〜${r.returnTime || '--:--'}</span>`;
+  }
+
+  function renderCalendar(){
+    renderEquipPicker();
+    if(calState.selected.size===0){
+      document.getElementById('cal-grid').innerHTML = '<div class="empty-state">先に「機材の管理」で点検機材を登録してください。</div>';
+      return;
+    }
+    const now = new Date();
+    if(calState.year==null){ calState.year = now.getFullYear(); calState.month = now.getMonth(); }
+
+    document.getElementById('cal-month').textContent = `${calState.year}年 ${calState.month+1}月`;
+
+    const grid = document.getElementById('cal-grid');
+    grid.innerHTML = DOW.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+
+    const first = new Date(calState.year, calState.month, 1);
+    const startDow = first.getDay();
+    const daysInMonth = new Date(calState.year, calState.month+1, 0).getDate();
+    const today = todayISO();
+    const selectedIds = Array.from(calState.selected);
+
+    for(let i=0;i<startDow;i++){
+      grid.insertAdjacentHTML('beforeend', '<div class="cal-day empty"></div>');
+    }
+
+    for(let d=1; d<=daysInMonth; d++){
+      const mm = String(calState.month+1).padStart(2,'0');
+      const dd = String(d).padStart(2,'0');
+      const iso = `${calState.year}-${mm}-${dd}`;
+
+      const dayRes = data.reservations.filter(r => selectedIds.includes(r.equipId) && r.date===iso && r.status!=='rejected');
+      const confirmedMine = dayRes.filter(r => r.status==='confirmed' && r.member===me.name);
+      const confirmedOthers = dayRes.filter(r => r.status==='confirmed' && r.member!==me.name);
+      const pendingMine = dayRes.filter(r => r.status==='pending' && r.requester===me.name);
+
+      let cls = 'cal-day';
+      if(iso < today) cls += ' past';
+
+      let infoHtml = '';
+      if(confirmedMine.length===selectedIds.length && confirmedOthers.length===0){
+        cls += ' confirmed';
+        infoHtml = `<div class="cal-info">
+          ${confirmedMine.map(r=>`<span class="cal-equip">${escapeHtml(equipShortName(r.equipId))}</span>`).join('')}
+          <span class="cal-member">${escapeHtml(me.name)}</span>
+          ${timeLabel(confirmedMine[0])}
+        </div>`;
+      } else if(confirmedOthers.length){
+        cls += ' pending-mine';
+        infoHtml = `<div class="cal-info"><span class="cal-member">一部予約あり</span></div>`;
+      } else if(pendingMine.length){
+        cls += ' pending-mine';
+        infoHtml = `<div class="cal-info"><span class="cal-member">承認待ち</span></div>`;
+      } else if(iso >= today){
+        cls += ' free';
+      }
+
+      const cell = document.createElement('div');
+      cell.className = cls;
+      cell.innerHTML = `<div class="cal-daynum">${d}</div>${infoHtml}`;
+      if(iso >= today){
+        cell.addEventListener('click', ()=> handleDayClick(iso));
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  async function handleDayClick(iso){
+    if(!me.name){
+      toast('先に「会員名」でお名前を入力・保存してください');
+      return;
+    }
+    const selectedIds = Array.from(calState.selected);
+    if(selectedIds.length===0){
+      toast('予約したい機材を左の一覧からチェックしてください');
+      return;
+    }
+    const pickupHour = document.getElementById('pickup-hour').value;
+    const pickupMin = document.getElementById('pickup-min').value;
+    const returnHour = document.getElementById('return-hour').value;
+    const returnMin = document.getElementById('return-min').value;
+    const pickupTime = (pickupHour && pickupMin) ? `${pickupHour}:${pickupMin}` : '';
+    const returnTime = (returnHour && returnMin) ? `${returnHour}:${returnMin}` : '';
+
+    // 選択中の機材すべてが「自分の予約済み」なら、クリックはキャンセル操作として扱う
+    const myConfirmedForSelected = selectedIds
+      .map(equipId => data.reservations.find(r => r.equipId===equipId && r.date===iso && r.status==='confirmed'))
+      .filter(Boolean);
+    const allMine = myConfirmedForSelected.length===selectedIds.length
+      && myConfirmedForSelected.every(r => r.member===me.name);
+
+    if(allMine){
+      const names = myConfirmedForSelected.map(r=>equipShortName(r.equipId)).join('、');
+      const ok = confirm(`${iso} の予約(${names})をキャンセルします。よろしいですか?`);
+      if(!ok) return;
+      const idsToRemove = new Set(myConfirmedForSelected.map(r=>r.id));
+      data.reservations = data.reservations.filter(r=>!idsToRemove.has(r.id));
+      await saveData();
+      renderCalendar();
+      renderOverview();
+      renderOverviewCalendar();
+      toast('予約をキャンセルしました');
+      return;
+    }
+
+    const toConfirm = [];
+    const toRequest = [];
+
+    selectedIds.forEach(equipId=>{
+      const dayRes = data.reservations.filter(r => r.equipId===equipId && r.date===iso && r.status!=='rejected');
+      const confirmed = dayRes.find(r=>r.status==='confirmed');
+      if(confirmed && confirmed.member===me.name){
+        // すでに自分で予約済み: 何もしない
+      } else if(confirmed){
+        toRequest.push({ equipId, approver: confirmed.member });
+      } else {
+        toConfirm.push(equipId);
+      }
+    });
+
+    if(toConfirm.length===0 && toRequest.length===0){
+      toast('選択した機材はすべて、その日ご自身で予約済みです');
+      return;
+    }
+
+    const lines = [];
+    if(toConfirm.length) lines.push(`予約: ${toConfirm.map(id=>equipShortName(id)).join('、')}`);
+    if(toRequest.length) lines.push(`承認依頼: ${toRequest.map(x=>`${equipShortName(x.equipId)}(${x.approver}さん)`).join('、')}`);
+    const ok = confirm(`${iso}\n${lines.join('\n')}\n\nよろしいですか?`);
+    if(!ok) return;
+
+    toConfirm.forEach(equipId=>{
+      data.reservations.push({
+        id: uid(),
+        equipId,
+        date: iso,
+        member: me.name,
+        status: 'confirmed',
+        pickupTime, returnTime,
+        createdAt: Date.now()
+      });
+    });
+    toRequest.forEach(({equipId, approver})=>{
+      data.reservations.push({
+        id: uid(),
+        equipId,
+        date: iso,
+        member: me.name,
+        status: 'pending',
+        requester: me.name,
+        approver,
+        pickupTime, returnTime,
+        createdAt: Date.now()
+      });
+    });
+
+    await saveData();
+    renderCalendar();
+    renderOverview();
+    const parts = [];
+    if(toConfirm.length) parts.push(`予約 ${toConfirm.length}件`);
+    if(toRequest.length) parts.push(`承認依頼 ${toRequest.length}件`);
+    toast(parts.join(' / ') + 'を送信しました');
+  }
+
+  // ---------- Approvals ----------
+  function refreshBadge(){
+    const badge = document.getElementById('approval-badge');
+    if(!me.name){ badge.textContent=''; return; }
+    const n = data.reservations.filter(r=>r.status==='pending' && r.approver===me.name).length;
+    badge.textContent = n ? ` (${n})` : '';
+  }
+
+  function renderApprovals(){
+    refreshBadge();
+    const body = document.getElementById('approvals-body');
+    if(!me.name){
+      body.innerHTML = '<div class="empty-state">お名前を入力・保存すると、あなた宛ての承認依頼が表示されます。</div>';
+      document.getElementById('my-requests-body').innerHTML = '';
+      return;
+    }
+    const pending = data.reservations.filter(r=>r.status==='pending' && r.approver===me.name);
+    if(pending.length===0){
+      body.innerHTML = '<div class="empty-state">現在、あなた宛ての承認依頼はありません。</div>';
+    } else {
+      body.innerHTML = pending.map(r=>`
+        <div class="req-card">
+          <div><strong>${escapeHtml(r.requester)}</strong> さんから</div>
+          <div class="meta">機材: ${escapeHtml(equipName(r.equipId))} ／ 希望日: <span class="mono">${r.date}</span>${(r.pickupTime||r.returnTime) ? ` ／ 時間: ${r.pickupTime||'--:--'}〜${r.returnTime||'--:--'}` : ''}</div>
+          <div class="req-actions">
+            <button class="btn accent btn-sm" data-approve="${r.id}">承認する</button>
+            <button class="btn danger btn-sm" data-reject="${r.id}">却下する</button>
+          </div>
+        </div>
+      `).join('');
+      body.querySelectorAll('[data-approve]').forEach(b=>{
+        b.addEventListener('click', ()=> resolveRequest(b.getAttribute('data-approve'), true));
+      });
+      body.querySelectorAll('[data-reject]').forEach(b=>{
+        b.addEventListener('click', ()=> resolveRequest(b.getAttribute('data-reject'), false));
+      });
+    }
+
+    const mine = data.reservations.filter(r=> r.requester===me.name && r.status!=='confirmed-original');
+    const myReqs = data.reservations.filter(r => r.requester===me.name);
+    const outBody = document.getElementById('my-requests-body');
+    if(myReqs.length===0){
+      outBody.innerHTML = '<div class="empty-state">これまでに出した承認依頼はありません。</div>';
+    } else {
+      outBody.innerHTML = myReqs.slice().sort((a,b)=>b.createdAt-a.createdAt).map(r=>{
+        const statusLabel = r.status==='pending' ? '承認待ち' : r.status==='confirmed' ? '承認されました' : '却下されました';
+        const tagClass = r.status==='pending' ? 'pending' : r.status==='confirmed' ? 'confirmed' : 'pending';
+        return `<div class="req-card">
+          <div class="meta">機材: ${escapeHtml(equipName(r.equipId))} ／ 希望日: <span class="mono">${r.date}</span> ／ 承認者: ${escapeHtml(r.approver||'-')}${(r.pickupTime||r.returnTime) ? ` ／ 時間: ${r.pickupTime||'--:--'}〜${r.returnTime||'--:--'}` : ''}</div>
+          <span class="tag ${tagClass}">${statusLabel}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  async function resolveRequest(id, approve){
+    const req = data.reservations.find(r=>r.id===id);
+    if(!req) return;
+    req.status = approve ? 'confirmed' : 'rejected';
+    await saveData();
+    renderApprovals();
+    renderOverview();
+    toast(approve ? '承認しました。一覧表に反映されました。' : '却下しました。');
+  }
+
+  // ---------- Manage ----------
+  document.getElementById('add-equip').addEventListener('click', async ()=>{
+    const nameEl = document.getElementById('new-equip-name');
+    const noteEl = document.getElementById('new-equip-note');
+    const name = nameEl.value.trim();
+    if(!name){ toast('機材名を入力してください'); return; }
+    data.equipment.push({ id: uid(), name, note: noteEl.value.trim() });
+    await saveData();
+    nameEl.value=''; noteEl.value='';
+    renderManage();
+    renderOverview();
+    toast('機材を追加しました');
+  });
+
+  function renderManage(){
+    const list = document.getElementById('manage-list');
+    if(data.equipment.length===0){
+      list.innerHTML = '<div class="empty-state">機材がまだ登録されていません。</div>';
+      return;
+    }
+    list.innerHTML = data.equipment.map(eq=>`
+      <li class="equip-row">
+        <div>
+          <div class="equip-name">${escapeHtml(eq.name)}</div>
+          ${eq.note?`<div class="equip-note">${escapeHtml(eq.note)}</div>`:''}
+        </div>
+        <button class="btn danger btn-sm" data-del="${eq.id}">削除</button>
+      </li>
+    `).join('');
+    list.querySelectorAll('[data-del]').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const id = b.getAttribute('data-del');
+        if(!confirm('この機材を削除しますか?関連する予約データは残ります。')) return;
+        data.equipment = data.equipment.filter(e=>e.id!==id);
+        await saveData();
+        renderManage();
+        renderOverview();
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- Init ----------
+  function populateHourSelects(){
+    const hourOptions = Array.from({length:24}, (_,h)=>{
+      const hh = String(h).padStart(2,'0');
+      return `<option value="${hh}">${hh}</option>`;
+    }).join('');
+    ['pickup-hour','return-hour'].forEach(id=>{
+      document.getElementById(id).insertAdjacentHTML('beforeend', hourOptions);
+    });
+  }
+
+  (async function init(){
+    populateHourSelects();
+    await loadAll();
+    renderOverview();
+    renderOverviewCalendar();
+    renderManage();
+    const now = new Date();
+    calState.year = now.getFullYear();
+    calState.month = now.getMonth();
+    renderCalendar();
+    renderApprovals();
+  })();
+})();
+</script>
+</body>
+</html>
