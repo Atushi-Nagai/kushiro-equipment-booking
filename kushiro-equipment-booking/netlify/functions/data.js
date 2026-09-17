@@ -12,7 +12,11 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers: HEADERS, body: '' };
   }
 
-  const store = getStore('kushiro-equipment-store');
+  const store = getStore({
+    name: 'kushiro-equipment-store',
+    siteID: process.env.NETLIFY_SITE_ID,
+    token: process.env.NETLIFY_BLOBS_TOKEN
+  });
 
   if (event.httpMethod === 'GET') {
     const value = await store.get('app-data', { type: 'json' });
